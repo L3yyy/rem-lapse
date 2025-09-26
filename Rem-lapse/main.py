@@ -1,10 +1,12 @@
 import os
 import logging
 import discord
+import aiohttp
+
 from discord.ext import commands
 from dotenv import load_dotenv
 from better_profanity import profanity
-import aiohttp
+from discord import app_commands
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -14,9 +16,10 @@ handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w'
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+# client = discord.Client(intents=intents)
+# tree = app_commands.CommandTree(client)
 
 bot = commands.Bot(command_prefix = ['rem ', 'rem'], intents = intents, case_insensitive = False)
-bot.remove_command('help')
 
 @bot.event
 async def on_ready():
@@ -25,7 +28,13 @@ async def on_ready():
     await bot.change_presence(status = discord.Status.online, activity=activity)
     print(f"We're ready, {bot.user.name}")
 
-# member join function
+    try:
+        synced = await bot.tree.sync()  # sync slash commands
+        print(f"✔ Synced {len(synced)} command(s)")
+    except Exception as e:
+        print(f"❌ Error syncing commands: {e}")
+
+# MEMBER JOIN FUNCTION
 @bot.event
 async def on_member_join(member):
     embed = discord.Embed(
@@ -33,25 +42,15 @@ async def on_member_join(member):
         description = (
             f"Oh! Welcome to the server, {member.mention}-senpai!\n\n"
             "If you are interested on having me in your server, here's my invite link:\n"
-            "[✨ Invite me ✨](https://discord.com/oauth2/authorize?client_id=1380535770489688114&permissions=378295814145&integration_type=0&scope=bot)\n\n"
+            "[✨ Invite me ✨](https://discord.com/oauth2/authorize?client_id=1380535770489688114&permissions=378295814145&scope=bot%20applications.commands)\n\n"
         ),
         color = discord.Color.blue()
     )
     embed.set_thumbnail(url = bot.user.avatar.url if bot.user.avatar else None)
     await member.send(embed = embed)
 
-# assign """DEPRECATED"""
-# @bot.command()
-# async def assign(ctx):
-#     role = discord.utils.get(ctx.guild.roles, name=secret_role)
-#     if role:
-#         await ctx.author.add_roles(role)
-#         await ctx.send(f"{secret_role} has been assigned to {ctx.author.mention}")
-#     else:
-#         await ctx.send("Role not found.")
-
-# catto command
-@bot.command(aliases = ['cat'])
+# CATTO COMMAND
+@bot.hybrid_command(name = "catto", description = "Get a random picture of a cat.", aliases = ['cat'])
 async def catto(ctx):
     url = "https://api.thecatapi.com/v1/images/search"
     
@@ -69,8 +68,8 @@ async def catto(ctx):
 
     await ctx.send(embed = embed)
 
-# doggo command
-@bot.command(aliases = ['dog'])
+# DOGGO COMMAND
+@bot.hybrid_command(name = "doggo", description = "Get a random picture of a dog.", aliases = ['dog'])
 async def doggo(ctx):
     url = "https://api.thedogapi.com/v1/images/search"
     
@@ -88,8 +87,8 @@ async def doggo(ctx):
 
     await ctx.send(embed = embed)
 
-# fact command
-@bot.command()
+# FACT COMMAND
+@bot.hybrid_command(name = "fact", description = "Receive a random fun fact.")
 async def fact(ctx):
     url = "https://uselessfacts.jsph.pl/random.json?language=en"
 
@@ -107,14 +106,15 @@ async def fact(ctx):
 
     await ctx.send(embed = embed)
 
-@bot.command(aliases = ['invite'])
+# INVITE COMMAND
+@bot.hybrid_command(name = "invite", description = "Get the bot's invite link.")
 async def inv(ctx):
     embed = discord.Embed(
         title = "💌  Invite Rem-lapse",
         description = (
             f"Oh! You want me to join your server, {ctx.author.mention}-senpai?\n\n"
             "Aww.. Thank you so much! Here's my invite link:\n"
-            "[✨ Invite me ✨](https://discord.com/oauth2/authorize?client_id=1380535770489688114&permissions=378295814145&integration_type=0&scope=bot)\n\n"
+            "[✨ Invite me ✨](https://discord.com/oauth2/authorize?client_id=1380535770489688114&permissions=378295814145&scope=bot%20applications.commands)\n\n"
             "Feeling lost? Join our support server:\n"
             "[🔎 Join here 🔎](https://discord.gg/hg7vtGfVQ8)"
         ),
@@ -124,19 +124,20 @@ async def inv(ctx):
     embed.set_thumbnail(url = bot.user.avatar.url if bot.user.avatar else None)
     await ctx.send(embed = embed)
 
-# ALL COMMANDS
-@bot.command()
+bot.remove_command('help')
+# HELP COMMAND
+@bot.hybrid_command(name = "help", description = "Show all available commands.")
 async def help(ctx):
     embed = discord.Embed(
         title = f"Here's the command menu, senpai:",
-        description = f"Prefix `{bot.command_prefix[0]}`",
+        description = f"Prefix `{bot.command_prefix[1]}`",
         color = discord.Color.blue()
     )
-    embed.add_field(name = "🔗 HELPFUL LINKS", value = ("[Support Server](https://discord.gg/gxM5TufB8Y)\n" "[GitHub](https://github.com/L3yyy)\n" "[Invite This Bot](https://discord.com/oauth2/authorize?client_id=1380535770489688114&permissions=378295814145&integration_type=0&scope=bot)"), inline = False)
+    embed.add_field(name = "🔗 HELPFUL LINKS", value = ("[Support Server](https://discord.gg/gxM5TufB8Y)\n" "[GitHub](https://github.com/L3yyy)\n" "[Invite This Bot](https://discord.com/oauth2/authorize?client_id=1380535770489688114&permissions=378295814145&scope=bot%20applications.commands)"), inline = False)
     embed.add_field(name = "⚙️ COMMANDS", value = "List of available commands:", inline = False)
 
     embed.add_field(name = "fun", value = "Show all fun commands", inline = False )
-    embed.add_field(name = "helpme", value = "Show all available commands.", inline = False)
+    embed.add_field(name = "help", value = "Show all available commands.", inline = False)
     embed.add_field(name = "catto, cat", value = "Get a random picture of a cat.", inline = False)
     embed.add_field(name = "doggo, dog", value = "Get a random picture of a dog.", inline = False)
     embed.add_field(name = "fact", value = "Receive a random fun fact.", inline = False)
@@ -146,7 +147,7 @@ async def help(ctx):
     await ctx.send(embed = embed)
 
 # FUN COMMANDS
-@bot.command()
+@bot.hybrid_command(name = "fun", description = "Show all fun commands.")
 async def fun(ctx):
     embed = discord.Embed(
         title = f"Here's a list of fun commands, senpai:",
@@ -160,7 +161,7 @@ async def fun(ctx):
     
     await ctx.send(embed = embed) 
 
-@bot.command(aliases = ['svinf', 'svinfo'])
+@bot.hybrid_command(name = "serverinfo", description = "View information about this server.", aliases = ['svinf', 'svinfo'])
 async def serverinfo(ctx):
     guild = ctx.guild
     author = ctx.author
@@ -172,7 +173,7 @@ async def serverinfo(ctx):
         color = discord.Color.blue()
     )
 
-    embed.set_author(name=f"{author}", icon_url=author.avatar.url if author.avatar else None)
+    embed.set_author(name = f"{author}", icon_url=author.avatar.url if author.avatar else None)
     embed.set_thumbnail(url = guild.icon.url if guild.icon else None)
 
     embed.add_field(name = "Server Name", value = guild.name, inline = True)
@@ -189,4 +190,9 @@ async def serverinfo(ctx):
     embed.set_footer(text = "Server Info")
     await ctx.send(embed = embed)
 
-bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+# COPILOT-GENERATED CODE | PING COMMAND
+@bot.hybrid_command(name = "ping", description = "Check the bot's latency")
+async def ping(ctx: commands.Context):
+    await ctx.send(f"Pong! 🏓 Latency: {round(bot.latency * 1000)}ms")
+
+bot.run(token, log_handler = handler, log_level = logging.DEBUG)
