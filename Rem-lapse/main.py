@@ -28,8 +28,6 @@ async def on_ready():
 async def on_member_join(member):
     await member.send(f"Welcome to the server {member.name}")
 
-@bot.event
-
 # assign
 @bot.command()
 async def assign(ctx):
